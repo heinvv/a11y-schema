@@ -1,0 +1,142 @@
+/**
+ * focus-patterns - Minimal Example Styles
+ * This CSS is NOT part of the library - it's just for demo purposes
+ * Style your tabs however you want!
+ */
+
+/* Tab List Container */
+[data-role="tablist"] {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 1.5rem;
+}
+
+/* Vertical tabs container uses flexbox layout */
+[data-orientation="vertical"] {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+/* Vertical orientation tablist */
+[data-role="tablist"].vertical-tabs {
+  flex-direction: column;
+  border-bottom: none;
+  border-right: 2px solid #e0e0e0;
+  margin-bottom: 0;
+  margin-right: 0;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+/* Individual Tabs */
+[data-role="tab"] {
+  background: none;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Vertical tabs styling */
+.vertical-tabs [data-role="tab"] {
+  border-bottom: none;
+  border-right: 3px solid transparent;
+  text-align: left;
+  width: 100%;
+}
+
+/* Hover state */
+[data-role="tab"]:hover {
+  color: #333;
+  background: #f5f5f5;
+}
+
+/* Focus state - IMPORTANT for accessibility! */
+[data-role="tab"]:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: -2px;
+  color: #0066cc;
+}
+
+/* Selected state */
+[data-role="tab"][aria-selected="true"] {
+  color: #0066cc;
+  border-bottom-color: #0066cc;
+}
+
+.vertical-tabs [data-role="tab"][aria-selected="true"] {
+  border-bottom-color: transparent;
+  border-right-color: #0066cc;
+  background: #f0f7ff;
+}
+
+/* Tab Panel */
+[data-role="tabpanel"] {
+  padding: 0.5rem 0;
+  animation: fadeIn 0.2s ease;
+}
+
+/* Vertical tabs layout - panels take up remaining space */
+[data-orientation="vertical"] [data-role="tabpanel"] {
+  flex: 1;
+  padding: 0;
+}
+
+/* Hidden panels */
+[data-role="tabpanel"][hidden] {
+  display: none;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Screen reader only content */
+.fp-sr-only {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  [data-role="tab"] {
+    transition: none;
+  }
+
+  [data-role="tabpanel"] {
+    animation: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  [data-role="tab"]:focus {
+    outline-width: 3px;
+  }
+
+  [data-role="tab"][aria-selected="true"] {
+    border-bottom-width: 4px;
+  }
+
+  .vertical-tabs [data-role="tab"][aria-selected="true"] {
+    border-right-width: 4px;
+  }
+}

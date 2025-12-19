@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>focus-patterns POC Demo</title>
+  <link rel="stylesheet" href="/demo/examples/minimal.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      line-height: 1.6;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .version {
+      color: #666;
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+
+    .demo-section {
+      background: white;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .demo-section h2 {
+      margin-top: 0;
+      color: #0066cc;
+      font-size: 1.25rem;
+    }
+
+    .demo-section p {
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    code {
+      background: #f0f0f0;
+      padding: 0.125rem 0.25rem;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.875em;
+    }
+
+    .keyboard-help {
+      background: #fffbf0;
+      border-left: 4px solid #ffcc00;
+      padding: 1rem;
+      margin-top: 2rem;
+      font-size: 0.875rem;
+    }
+
+    .keyboard-help h3 {
+      margin-top: 0;
+      font-size: 1rem;
+    }
+
+    .keyboard-help ul {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>focus-patterns</h1>
+  <p class="version">Version 0.1.0 - POC Demo</p>
+
+  <!-- Example 1: Basic Tabs (Manual Activation) -->
+  <section class="demo-section">
+    <h2>Example 1: Basic Tabs (Manual Activation)</h2>
+    <p>Classic tabs with manual activation. Use arrow keys to navigate, <code>Enter</code> or <code>Space</code> to activate.</p>
+
+    <div data-focus="tabs" data-activation="manual">
+      <div data-role="tablist" aria-label="Product Information">
+        <button data-role="tab" data-controls="desc">Description</button>
+        <button data-role="tab" data-controls="specs">Specifications</button>
+        <button data-role="tab" data-controls="reviews">Reviews</button>
+      </div>
+
+      <div data-role="tabpanel" id="desc">
+        <h3>Product Description</h3>
+        <p>This is a high-quality product designed with accessibility in mind. It follows WCAG 2.1 AA standards and provides an excellent user experience for all users, including those using assistive technologies.</p>
+        <p>Features include automatic ARIA attribute management, keyboard navigation, and screen reader support.</p>
+      </div>
+
+      <div data-role="tabpanel" id="specs">
+        <h3>Technical Specifications</h3>
+        <ul>
+          <li><strong>Size:</strong> < 5KB minified + gzipped</li>
+          <li><strong>Dependencies:</strong> Zero</li>
+          <li><strong>Browser Support:</strong> Chrome 90+, Firefox 88+, Safari 14+</li>
+          <li><strong>ARIA Compliant:</strong> Yes (WAI-ARIA 1.2)</li>
+          <li><strong>Keyboard Navigation:</strong> Full support</li>
+        </ul>
+      </div>
+
+      <div data-role="tabpanel" id="reviews">
+        <h3>Customer Reviews</h3>
+        <p><strong>⭐⭐⭐⭐⭐ 5/5</strong> - "Finally, accessible tabs that just work!"</p>
+        <p><strong>⭐⭐⭐⭐⭐ 5/5</strong> - "Zero dependencies and tiny bundle size. Perfect!"</p>
+        <p><strong>⭐⭐⭐⭐⭐ 5/5</strong> - "Great for WordPress projects."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example 2: Auto-Activation Tabs -->
+  <section class="demo-section">
+    <h2>Example 2: Auto-Activation Tabs</h2>
+    <p>Tabs with automatic activation. Arrow keys immediately switch tabs.</p>
+
+    <div data-focus="tabs" data-activation="auto">
+      <div data-role="tablist" aria-label="Settings">
+        <button data-role="tab" data-controls="general">General</button>
+        <button data-role="tab" data-controls="privacy">Privacy</button>
+        <button data-role="tab" data-controls="security">Security</button>
+      </div>
+
+      <div data-role="tabpanel" id="general">
+        <h3>General Settings</h3>
+        <p>Configure general application settings here. This panel demonstrates auto-activation mode where navigating with arrow keys immediately activates the tab.</p>
+      </div>
+
+      <div data-role="tabpanel" id="privacy">
+        <h3>Privacy Settings</h3>
+        <p>Manage your privacy preferences. Control what data is collected and how it's used.</p>
+      </div>
+
+      <div data-role="tabpanel" id="security">
+        <h3>Security Settings</h3>
+        <p>Configure security options including two-factor authentication and password requirements.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example 3: Vertical Tabs -->
+  <section class="demo-section">
+    <h2>Example 3: Vertical Tabs</h2>
+    <p>Tabs with vertical orientation. Use <code>Up/Down</code> arrow keys to navigate.</p>
+
+    <div data-focus="tabs" data-orientation="vertical">
+      <div data-role="tablist" aria-label="Dashboard">
+        <button data-role="tab" data-controls="overview">Overview</button>
+        <button data-role="tab" data-controls="analytics">Analytics</button>
+        <button data-role="tab" data-controls="reports">Reports</button>
+      </div>
+
+      <div data-role="tabpanel" id="overview">
+        <h3>Overview</h3>
+        <p>Welcome to your dashboard overview. Here you'll find a summary of all your key metrics and recent activity.</p>
+      </div>
+
+      <div data-role="tabpanel" id="analytics">
+        <h3>Analytics</h3>
+        <p>Deep dive into your analytics data. Track user behavior, conversion rates, and performance metrics.</p>
+      </div>
+
+      <div data-role="tabpanel" id="reports">
+        <h3>Reports</h3>
+        <p>Generate and view detailed reports. Export data in various formats for further analysis.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keyboard Navigation Help -->
+  <div class="keyboard-help">
+    <h3>⌨️ Keyboard Navigation</h3>
+    <ul>
+      <li><strong>Tab:</strong> Move focus into/out of tab list</li>
+      <li><strong>Left/Right Arrow (horizontal):</strong> Navigate between tabs</li>
+      <li><strong>Up/Down Arrow (vertical):</strong> Navigate between tabs</li>
+      <li><strong>Home:</strong> Jump to first tab</li>
+      <li><strong>End:</strong> Jump to last tab</li>
+      <li><strong>Enter/Space (manual mode):</strong> Activate focused tab</li>
+    </ul>
+  </div>
+
+  <!-- Load the compiled JavaScript -->
+  <script type="module" src="../dist/index.js"></script>
+
+  <!-- Optional: Demo interaction logging -->
+  <script type="module">
+    console.log('focus-patterns version:', window.FocusPatterns.version);
+    console.log('Ready! Try navigating the tabs with your keyboard.');
+  </script>
+</body>
+</html>

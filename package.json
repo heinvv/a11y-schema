@@ -1,0 +1,38 @@
+{
+  "name": "focus-patterns",
+  "version": "0.1.0",
+  "description": "Lightweight, drop-in JavaScript library for accessible UI patterns with automatic keyboard handling and ARIA semantics",
+  "main": "dist/focus-patterns.cjs.js",
+  "module": "dist/focus-patterns.esm.js",
+  "types": "dist/focus-patterns.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc && npm run bundle",
+    "bundle": "echo 'Bundling step - add rollup later'",
+    "serve": "npx serve -p 3000",
+    "demo": "npm run serve"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "aria",
+    "focus",
+    "keyboard",
+    "tabs",
+    "patterns",
+    "wcag",
+    "vanilla-js"
+  ],
+  "author": "Hein",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/focus-patterns.git"
+  }
+}
