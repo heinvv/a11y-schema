@@ -13,7 +13,8 @@
     "build": "tsc && npm run bundle",
     "bundle": "echo 'Bundling step - add rollup later'",
     "serve": "npx serve -p 3000",
-    "demo": "npm run serve"
+    "demo": "npm run serve",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "accessibility",
