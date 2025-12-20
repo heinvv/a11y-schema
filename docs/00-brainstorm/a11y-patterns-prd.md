@@ -867,6 +867,51 @@ Before starting development, verify:
 
 ---
 
+## Open Design Questions
+
+### Tabs Pattern
+
+1. **Default Tab Selection**
+   - **Current behavior:** First tab (index 0) is always selected by default (hardcoded in `init()`)
+   - **Question:** How should developers specify a different default tab?
+   - **Options:**
+     - A) Config parameter: `defaultSelectedIndex?: number`
+     - B) HTML attribute: Check for existing `aria-selected="true"` in markup
+     - C) Data attribute: `data-selected="true"` on tab element
+     - D) Combination: Config takes precedence, fall back to HTML attribute
+   - **Considerations:**
+     - Which approach is most intuitive for declarative API users?
+     - Should we validate that only one tab is marked as default?
+     - What happens if default index is out of bounds?
+   - **Status:** Needs decision before v1.0
+
+2. **Tabpanel Focusability (`tabindex` Attribute)**
+   - **Current behavior:** ALL tabpanels get `tabindex="0"` (line 119), making them focusable
+   - **Question:** Should tabpanels always be focusable, or only when they lack focusable content?
+   - **Problem:** If a panel contains links/buttons, setting `tabindex="0"` creates unnecessary tab stops:
+     ```
+     Tab → Tab button → Panel container (unnecessary!) → Link inside panel
+     ```
+   - **WAI-ARIA APG Guidance:**
+     - Panel WITH focusable content: Don't set `tabindex` (or use `tabindex="-1"`)
+     - Panel WITHOUT focusable content: Use `tabindex="0"` for keyboard scrolling
+   - **Options:**
+     - A) Auto-detect: Check if panel contains focusable elements, only add `tabindex="0"` if none found
+     - B) Config option: `panelTabindex?: '0' | '-1' | 'auto'` (default: 'auto')
+     - C) Always use `tabindex="-1"`: Allow programmatic focus but not tab navigation
+     - D) Never set `tabindex`: Let developers handle it manually if needed
+   - **Selector for detection (Option A):**
+     ```typescript
+     panel.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+     ```
+   - **Considerations:**
+     - Auto-detection might miss dynamically added content
+     - Too much magic vs. too manual?
+     - Performance impact of selector query?
+   - **Status:** Needs decision before v1.0 - impacts keyboard navigation UX
+
+---
+
 ## Appendix A: Code Examples
 
 ### Basic Usage Example
