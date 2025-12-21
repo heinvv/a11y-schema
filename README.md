@@ -20,6 +20,9 @@ This is a **Proof of Concept** demonstrating the Tabs pattern implementation.
 - ✅ **Keyboard Navigation** (Arrow keys, Home, End)
 - ✅ **Manual & Auto Activation** modes
 - ✅ **Horizontal & Vertical** orientations
+- ✅ **Forgiving Mode** - auto-fixes missing ARIA attributes
+- ✅ **Strict Mode** - enforces valid markup
+- ✅ **Intelligent tabindex** - auto-detects focusable content
 - ✅ **Auto-initialization** from HTML markup
 - ✅ **Screen Reader Support** with announcements
 - ✅ **Zero CSS** - style it however you want
@@ -39,11 +42,34 @@ npm install
 npx tsc
 ```
 
-### 3. Open Demo
+### 3. Test in Browser
 
+There are two ways to test the demo:
+
+**Option A: Open Directly** (simplest)
 ```bash
+# macOS
 open demo/index.html
+
+# Linux
+xdg-open demo/index.html
+
+# Windows
+start demo/index.html
 ```
+
+**Option B: Use a Local Server** (recommended)
+```bash
+# Using Python 3
+python3 -m http.server 8000
+
+# Using Node's http-server
+npx http-server
+
+# Then visit: http://localhost:8000/demo/
+```
+
+> **Why use a server?** Module scripts require CORS headers, which file:// URLs don't provide. A local server ensures proper module loading.
 
 ## Usage
 
@@ -94,14 +120,61 @@ const tabs = window.FocusPatterns.Tabs.init(element, {
 tabs.selectTab(1);
 ```
 
+## Forgiving vs Strict Mode
+
+### Forgiving Mode (Default)
+
+Automatically fixes missing ARIA attributes. Perfect for rapid prototyping:
+
+```html
+<!-- Minimal markup - library adds all ARIA attributes -->
+<div data-focus="tabs">
+  <div data-role="tablist" aria-label="Settings">
+    <button data-role="tab">Tab 1</button>
+    <button data-role="tab">Tab 2</button>
+  </div>
+  <div data-role="tabpanel">Content 1</div>
+  <div data-role="tabpanel">Content 2</div>
+</div>
+```
+
+**What it auto-fixes:**
+- ✅ Generates IDs if missing
+- ✅ Adds `role="tab"` and `role="tabpanel"`
+- ✅ Sets up `aria-controls` and `aria-labelledby`
+- ✅ Intelligently adds `tabindex` (only if panel has no focusable content)
+- ✅ Sets initial `aria-selected` states
+
+### Strict Mode
+
+Enforces valid markup. Best for production code:
+
+```html
+<div data-focus="tabs" data-strict="true">
+  <div role="tablist" aria-label="Settings">
+    <button role="tab" id="tab-1" aria-controls="panel-1">Tab 1</button>
+    <button role="tab" id="tab-2" aria-controls="panel-2">Tab 2</button>
+  </div>
+  <div role="tabpanel" id="panel-1" aria-labelledby="tab-1">Content 1</div>
+  <div role="tabpanel" id="panel-2" aria-labelledby="tab-2">Content 2</div>
+</div>
+```
+
+**Throws errors if missing:**
+- ❌ Missing `role` attributes
+- ❌ Missing IDs on tabs or panels
+- ❌ Missing `aria-controls` or `aria-labelledby`
+
 ## Configuration Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `strict` | `boolean` | `false` | Enable strict mode (requires valid markup) |
 | `activation` | `'auto' \| 'manual'` | `'manual'` | Auto-activate on arrow key or require Enter/Space |
 | `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` | Tab list orientation |
 | `loop` | `'true' \| 'false'` | `'true'` | Whether arrow keys wrap around |
 | `onChange` | `function` | - | Callback when tab changes |
+| `idPrefix` | `string` | `'tab'` | Prefix for auto-generated IDs (forgiving mode only) |
 | `announceChanges` | `boolean` | `true` | Announce tab changes to screen readers |
 
 ## Keyboard Navigation

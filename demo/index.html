@@ -171,6 +171,74 @@
     </div>
   </section>
 
+  <!-- Example 4: Strict Mode -->
+  <section class="demo-section">
+    <h2>Example 4: Strict Mode</h2>
+    <p>Strict mode enforces valid ARIA markup. All attributes must be present or it throws an error. Add <code>data-strict="true"</code> to enable.</p>
+
+    <div data-focus="tabs" data-strict="true">
+      <div role="tablist" aria-label="Account">
+        <button role="tab" id="strict-tab-1" aria-controls="strict-panel-1">Profile</button>
+        <button role="tab" id="strict-tab-2" aria-controls="strict-panel-2">Preferences</button>
+        <button role="tab" id="strict-tab-3" aria-controls="strict-panel-3">Billing</button>
+      </div>
+
+      <div role="tabpanel" id="strict-panel-1" aria-labelledby="strict-tab-1">
+        <h3>Profile</h3>
+        <p>Manage your account profile information. This example uses strict mode which requires all ARIA attributes to be present in the HTML.</p>
+      </div>
+
+      <div role="tabpanel" id="strict-panel-2" aria-labelledby="strict-tab-2">
+        <h3>Preferences</h3>
+        <p>Configure your user preferences and notification settings.</p>
+      </div>
+
+      <div role="tabpanel" id="strict-panel-3" aria-labelledby="strict-tab-3">
+        <h3>Billing</h3>
+        <p>View your billing information and payment history.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Example 5: Panels with Focusable Content -->
+  <section class="demo-section">
+    <h2>Example 5: Intelligent Tabindex (Panels with Links)</h2>
+    <p>In forgiving mode, the library intelligently detects focusable content. Panels with links/buttons don't get <code>tabindex="0"</code> to avoid unnecessary tab stops.</p>
+
+    <div data-focus="tabs">
+      <div data-role="tablist" aria-label="Resources">
+        <button data-role="tab">Documentation</button>
+        <button data-role="tab">Tutorials</button>
+        <button data-role="tab">Support</button>
+      </div>
+
+      <div data-role="tabpanel">
+        <h3>Documentation</h3>
+        <p>Browse our comprehensive documentation:</p>
+        <ul>
+          <li><a href="#getting-started">Getting Started Guide</a></li>
+          <li><a href="#api-reference">API Reference</a></li>
+          <li><a href="#examples">Code Examples</a></li>
+        </ul>
+        <p><em>Note: This panel contains links, so no tabindex is added to avoid extra tab stops.</em></p>
+      </div>
+
+      <div data-role="tabpanel">
+        <h3>Tutorials</h3>
+        <p>Learn with our step-by-step tutorials:</p>
+        <button onclick="alert('Tutorial 1')">Basic Tabs Tutorial</button>
+        <button onclick="alert('Tutorial 2')">Advanced Features Tutorial</button>
+        <p><em>Note: This panel contains buttons, so no tabindex is added.</em></p>
+      </div>
+
+      <div data-role="tabpanel">
+        <h3>Support</h3>
+        <p>Get help from our community and support team.</p>
+        <p>This panel has no focusable elements, so it gets <code>tabindex="0"</code> for keyboard scrolling.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Keyboard Navigation Help -->
   <div class="keyboard-help">
     <h3>⌨️ Keyboard Navigation</h3>
