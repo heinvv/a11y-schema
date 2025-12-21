@@ -867,48 +867,216 @@ Before starting development, verify:
 
 ---
 
-## Open Design Questions
+## ✅ RESOLVED: Design Decisions
 
 ### Tabs Pattern
 
-1. **Default Tab Selection**
-   - **Current behavior:** First tab (index 0) is always selected by default (hardcoded in `init()`)
-   - **Question:** How should developers specify a different default tab?
-   - **Options:**
-     - A) Config parameter: `defaultSelectedIndex?: number`
-     - B) HTML attribute: Check for existing `aria-selected="true"` in markup
-     - C) Data attribute: `data-selected="true"` on tab element
-     - D) Combination: Config takes precedence, fall back to HTML attribute
-   - **Considerations:**
-     - Which approach is most intuitive for declarative API users?
-     - Should we validate that only one tab is marked as default?
-     - What happens if default index is out of bounds?
-   - **Status:** Needs decision before v1.0
+1. **Default Tab Selection** ✅
+   - **Decision:** Both modes auto-select first tab if none specified
+     - If no tab has `aria-selected="true"` in markup, automatically select first tab (index 0)
+     - Applies to both forgiving and strict modes
+   - **Rationale:** Default selection is about usability, not validation - users should always have a working tabs component
 
-2. **Tabpanel Focusability (`tabindex` Attribute)**
-   - **Current behavior:** ALL tabpanels get `tabindex="0"` (line 119), making them focusable
-   - **Question:** Should tabpanels always be focusable, or only when they lack focusable content?
-   - **Problem:** If a panel contains links/buttons, setting `tabindex="0"` creates unnecessary tab stops:
-     ```
-     Tab → Tab button → Panel container (unnecessary!) → Link inside panel
-     ```
-   - **WAI-ARIA APG Guidance:**
-     - Panel WITH focusable content: Don't set `tabindex` (or use `tabindex="-1"`)
-     - Panel WITHOUT focusable content: Use `tabindex="0"` for keyboard scrolling
-   - **Options:**
-     - A) Auto-detect: Check if panel contains focusable elements, only add `tabindex="0"` if none found
-     - B) Config option: `panelTabindex?: '0' | '-1' | 'auto'` (default: 'auto')
-     - C) Always use `tabindex="-1"`: Allow programmatic focus but not tab navigation
-     - D) Never set `tabindex`: Let developers handle it manually if needed
-   - **Selector for detection (Option A):**
-     ```typescript
-     panel.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
-     ```
-   - **Considerations:**
-     - Auto-detection might miss dynamically added content
-     - Too much magic vs. too manual?
-     - Performance impact of selector query?
-   - **Status:** Needs decision before v1.0 - impacts keyboard navigation UX
+2. **Tabpanel Focusability (`tabindex` Attribute)** ✅
+   - **Decision:** Mode-dependent behavior
+     - **Forgiving mode (default):** Auto-detect focusable content
+       - Panel HAS focusable elements: Don't add `tabindex`
+       - Panel HAS NO focusable elements: Add `tabindex="0"` for keyboard scrolling
+       - Detection selector: `a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])`
+     - **Strict mode:** Never add `tabindex`; let developers handle it
+   - **Rationale:** Forgiving mode follows WAI-ARIA APG guidance automatically; strict mode gives full control
+
+---
+
+## ✅ RESOLVED: Architectural Strategy
+
+### Separation of Concerns: Behavior vs. Markup Validation
+
+**Decision:** Forgiving mode by default with optional strict mode via data attribute/config parameter
+
+---
+
+### Implementation Modes
+
+#### Default: Forgiving Mode (Auto-fixes Markup)
+**Philosophy:** Library makes accessibility easy by fixing common mistakes
+
+**Behavior:**
+```typescript
+// tabs.ts handles everything
+private setupARIA(): void {
+  this.tabs.forEach((tab, index) => {
+    const panel = this.panels[index];
+
+    // Auto-generate IDs if missing
+    const tabId = tab.id || generateId(`${this.config.idPrefix}-${index}`);
+    const panelId = panel.id || generateId(`${this.config.idPrefix}-panel-${index}`);
+
+    tab.id = tabId;
+    panel.id = panelId;
+
+    // Fix missing STATIC attributes
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-controls', panelId);
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', tabId);
+
+    // Auto-detect and set tabindex intelligently
+    const hasFocusableContent = panel.querySelector(
+      'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!hasFocusableContent) {
+      panel.setAttribute('tabindex', '0');
+    }
+
+    // Set DYNAMIC attributes (initial state)
+    tab.setAttribute('aria-selected', 'false');
+    tab.setAttribute('tabindex', '-1');
+    panel.hidden = true;
+  });
+
+  // Auto-select first tab if none selected
+  const preselected = this.tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+  this.selectTab(preselected >= 0 ? preselected : 0, false);
+}
+```
+
+**Usage:**
+```html
+<!-- Minimal markup - library fixes everything -->
+<div data-focus="tabs">
+  <div data-role="tablist" aria-label="Settings">
+    <button data-role="tab">Tab 1</button>
+    <button data-role="tab">Tab 2</button>
+  </div>
+  <div data-role="tabpanel">Content 1</div>
+  <div data-role="tabpanel">Content 2</div>
+</div>
+```
+
+**Pros:**
+- ✅ Lower barrier to entry
+- ✅ Faster adoption
+- ✅ Works with minimal markup
+- ✅ Intelligent auto-detection (tabindex)
+
+**Cons:**
+- ❌ Mixes concerns
+- ❌ Larger bundle size
+- ❌ Developers may not learn proper patterns
+
+---
+
+#### Optional: Strict Mode (Assumes Valid Markup)
+**Philosophy:** Library enhances valid HTML, doesn't fix broken markup
+
+**Activation:**
+```html
+<!-- Via data attribute -->
+<div data-focus="tabs" data-strict="true">...</div>
+
+<!-- Via config -->
+<script>
+  const tabs = FocusPatterns.Tabs.init(element, { strict: true });
+</script>
+```
+
+**Behavior:**
+```typescript
+private setupARIA(): void {
+  if (this.config.strict) {
+    // VERIFY only - throw errors if invalid
+    this.tabs.forEach((tab, index) => {
+      const panel = this.panels[index];
+
+      if (!tab.getAttribute('role')) throw new Error('Missing role="tab"');
+      if (!panel.getAttribute('role')) throw new Error('Missing role="tabpanel"');
+      if (!tab.id) throw new Error('Missing ID on tab');
+      if (!panel.id) throw new Error('Missing ID on panel');
+
+      // Only update DYNAMIC attributes
+      tab.setAttribute('aria-selected', 'false');
+      tab.setAttribute('tabindex', '-1');
+      panel.hidden = true;
+    });
+
+    // Auto-select first tab if none selected (same as forgiving mode)
+    const preselected = this.tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+    this.selectTab(preselected >= 0 ? preselected : 0, false);
+  } else {
+    // ... forgiving mode logic
+  }
+}
+```
+
+**Usage:**
+```html
+<!-- Complete, valid markup required -->
+<div data-focus="tabs" data-strict="true">
+  <div role="tablist" aria-label="Settings">
+    <button role="tab" id="tab-1" aria-controls="panel-1">Tab 1</button>
+    <button role="tab" id="tab-2" aria-controls="panel-2">Tab 2</button>
+  </div>
+  <div role="tabpanel" id="panel-1" aria-labelledby="tab-1">Content 1</div>
+  <div role="tabpanel" id="panel-2" aria-labelledby="tab-2">Content 2</div>
+</div>
+
+<!-- Or with explicit selection -->
+<div data-focus="tabs" data-strict="true">
+  <div role="tablist" aria-label="Settings">
+    <button role="tab" id="tab-1" aria-controls="panel-1">Tab 1</button>
+    <button role="tab" id="tab-2" aria-controls="panel-2" aria-selected="true">Tab 2</button>
+  </div>
+  <div role="tabpanel" id="panel-1" aria-labelledby="tab-1">Content 1</div>
+  <div role="tabpanel" id="panel-2" aria-labelledby="tab-2">Content 2</div>
+</div>
+```
+
+**Pros:**
+- ✅ Educational - forces correct markup
+- ✅ Clear errors when markup is wrong
+- ✅ No "magic" behavior
+
+**Cons:**
+- ❌ Higher barrier to entry
+- ❌ Requires complete markup
+
+---
+
+### Config Interface
+
+```typescript
+interface TabsConfig {
+  /** Enable strict mode - requires valid markup, no auto-fixing (default: false) */
+  strict?: boolean;
+
+  /** Activation behavior: auto or manual (default: manual) */
+  activation?: 'auto' | 'manual';
+
+  /** Orientation: horizontal or vertical (default: horizontal) */
+  orientation?: 'horizontal' | 'vertical';
+
+  /** Whether arrow keys should loop (default: true) */
+  loop?: 'true' | 'false';
+
+  /** Callback when tab changes */
+  onChange?: (tabIndex: number, tabElement: HTMLElement) => void;
+
+  /** ID prefix for generated IDs (forgiving mode only, default: 'tab') */
+  idPrefix?: string;
+
+  /** Whether to announce tab changes to screen readers (default: true) */
+  announceChanges?: boolean;
+}
+```
+
+---
+
+**Rationale:**
+- Default forgiving mode maximizes adoption and ease of use
+- Optional strict mode serves teams that want enforcement and education
+- Single codebase handles both modes with minimal overhead
+- Clear path for beginners → advanced users
 
 ---
 

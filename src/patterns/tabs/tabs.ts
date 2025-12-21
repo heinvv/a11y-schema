@@ -6,23 +6,55 @@
 
 import { generateId, moveFocus, getNextElement, announce } from '../../core/utils.js';
 
+const SELECTORS = {
+  TABLIST: '[data-role="tablist"]',
+  TAB: '[data-role="tab"]',
+  PANEL: '[data-role="tabpanel"]',
+  FOCUSABLE_ELEMENTS: 'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+} as const;
+
+const ARIA_ATTRIBUTES = {
+  ROLE: 'role',
+  ORIENTATION: 'aria-orientation',
+  SELECTED: 'aria-selected',
+  CONTROLS: 'aria-controls',
+  LABELLEDBY: 'aria-labelledby',
+  TABINDEX: 'tabindex'
+} as const;
+
+const ROLES = {
+  TABLIST: 'tablist',
+  TAB: 'tab',
+  PANEL: 'tabpanel'
+} as const;
+
+const CSS_CLASSES = {
+  VERTICAL: 'vertical-tabs'
+} as const;
+
+const TABINDEX_VALUES = {
+  FOCUSABLE: '0',
+  NOT_FOCUSABLE: '-1'
+} as const;
+
+const ERROR_MESSAGES = {
+  NO_TABLIST: 'focus-patterns: No tablist found in container',
+  NO_TABS_OR_PANELS: 'focus-patterns: No tabs or panels found',
+  MISMATCH_COUNT: 'focus-patterns: Number of tabs and panels do not match',
+  INVALID_TAB_INDEX: 'focus-patterns: Invalid tab index',
+  MISSING_TAB_ROLE: 'Missing role="tab" on tab element',
+  MISSING_PANEL_ROLE: 'Missing role="tabpanel" on panel element',
+  MISSING_TAB_ID: 'Missing ID on tab element',
+  MISSING_PANEL_ID: 'Missing ID on panel element'
+} as const;
+
 export interface TabsConfig {
-  /** Activation behavior: auto or manual (default: manual) */
+  strict?: boolean;
   activation?: 'auto' | 'manual';
-
-  /** Orientation: horizontal or vertical (default: horizontal) */
   orientation?: 'horizontal' | 'vertical';
-
-  /** Whether arrow keys should loop (default: true) */
   loop?: 'true' | 'false';
-
-  /** Callback when tab changes */
   onChange?: (tabIndex: number, tabElement: HTMLElement) => void;
-
-  /** ID prefix for generated IDs */
   idPrefix?: string;
-
-  /** Whether to announce tab changes to screen readers */
   announceChanges?: boolean;
 }
 
@@ -37,8 +69,8 @@ export class Tabs {
   constructor(container: HTMLElement, userConfig: TabsConfig = {}) {
     this.container = container;
 
-    // Merge config with defaults
     this.config = {
+      strict: userConfig.strict ?? false,
       activation: userConfig.activation || 'manual',
       orientation: userConfig.orientation || 'horizontal',
       loop: userConfig.loop || 'true',
@@ -51,87 +83,151 @@ export class Tabs {
   }
 
   private init(): void {
-    // Find tablist
-    this.tablist = this.container.querySelector('[data-role="tablist"]');
+    this.findElements();
+    this.validateElements();
+    this.setupARIA();
+    this.setupEvents();
+    this.selectInitialTab();
+  }
+
+  private findElements(): void {
+    this.tablist = this.container.querySelector(SELECTORS.TABLIST);
+    this.tabs = Array.from(this.container.querySelectorAll(SELECTORS.TAB));
+    this.panels = Array.from(this.container.querySelectorAll(SELECTORS.PANEL));
+  }
+
+  private validateElements(): void {
     if (!this.tablist) {
-      console.error('focus-patterns: No tablist found in container');
+      console.error(ERROR_MESSAGES.NO_TABLIST);
       return;
     }
 
-    // Find all tabs and panels
-    this.tabs = Array.from(this.container.querySelectorAll('[data-role="tab"]'));
-    this.panels = Array.from(this.container.querySelectorAll('[data-role="tabpanel"]'));
-
     if (this.tabs.length === 0 || this.panels.length === 0) {
-      console.error('focus-patterns: No tabs or panels found');
+      console.error(ERROR_MESSAGES.NO_TABS_OR_PANELS);
       return;
     }
 
     if (this.tabs.length !== this.panels.length) {
-      console.warn('focus-patterns: Number of tabs and panels do not match');
+      console.warn(ERROR_MESSAGES.MISMATCH_COUNT);
     }
-
-    // Set up ARIA attributes
-    this.setupARIA();
-
-    // Set up event listeners
-    this.setupEvents();
-
-    // Activate first tab
-    this.selectTab(0, false);
   }
 
   private setupARIA(): void {
     if (!this.tablist) return;
 
-    // Set tablist role and orientation
-    if (!this.tablist.getAttribute('role')) {
-      this.tablist.setAttribute('role', 'tablist');
-    }
-    this.tablist.setAttribute('aria-orientation', this.config.orientation);
+    this.setTablistAttributes();
+    this.applyOrientationStyling();
 
-    // Add vertical-tabs class for CSS styling
+    if (this.config.strict) {
+      this.setupStrictMode();
+    } else {
+      this.setupForgivingMode();
+    }
+  }
+
+  private setTablistAttributes(): void {
+    if (!this.tablist) return;
+
+    if (!this.tablist.getAttribute(ARIA_ATTRIBUTES.ROLE)) {
+      this.tablist.setAttribute(ARIA_ATTRIBUTES.ROLE, ROLES.TABLIST);
+    }
+    this.tablist.setAttribute(ARIA_ATTRIBUTES.ORIENTATION, this.config.orientation);
+  }
+
+  private applyOrientationStyling(): void {
+    if (!this.tablist) return;
+
     if (this.config.orientation === 'vertical') {
-      this.tablist.classList.add('vertical-tabs');
+      this.tablist.classList.add(CSS_CLASSES.VERTICAL);
     }
+  }
 
-    // Set up each tab and panel
+  private setupForgivingMode(): void {
     this.tabs.forEach((tab, index) => {
       const panel = this.panels[index];
       if (!panel) return;
 
-      // Generate IDs if needed
-      const tabId = tab.id || generateId(`${this.config.idPrefix}-${index}`);
-      const panelId = panel.id || generateId(`${this.config.idPrefix}-panel-${index}`);
-
-      tab.id = tabId;
-      panel.id = panelId;
-
-      // Set tab attributes
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-controls', panelId);
-      tab.setAttribute('aria-selected', 'false');
-      tab.setAttribute('tabindex', '-1');
-
-      // Set panel attributes
-      panel.setAttribute('role', 'tabpanel');
-      panel.setAttribute('aria-labelledby', tabId);
-      panel.setAttribute('tabindex', '0');
-      panel.hidden = true;
+      const { tabId, panelId } = this.ensureElementIds(tab, panel, index);
+      this.setStaticAriaAttributes(tab, panel, tabId, panelId);
+      this.setIntelligentTabindex(panel);
+      this.setInitialDynamicAttributes(tab, panel);
     });
+  }
+
+  private setupStrictMode(): void {
+    this.tabs.forEach((tab, index) => {
+      const panel = this.panels[index];
+      if (!panel) return;
+
+      this.validateRequiredAttributes(tab, panel);
+      this.setInitialDynamicAttributes(tab, panel);
+    });
+  }
+
+  private ensureElementIds(tab: HTMLElement, panel: HTMLElement, index: number): { tabId: string; panelId: string } {
+    const tabId = tab.id || generateId(`${this.config.idPrefix}-${index}`);
+    const panelId = panel.id || generateId(`${this.config.idPrefix}-panel-${index}`);
+
+    tab.id = tabId;
+    panel.id = panelId;
+
+    return { tabId, panelId };
+  }
+
+  private setStaticAriaAttributes(tab: HTMLElement, panel: HTMLElement, tabId: string, panelId: string): void {
+    tab.setAttribute(ARIA_ATTRIBUTES.ROLE, ROLES.TAB);
+    tab.setAttribute(ARIA_ATTRIBUTES.CONTROLS, panelId);
+    panel.setAttribute(ARIA_ATTRIBUTES.ROLE, ROLES.PANEL);
+    panel.setAttribute(ARIA_ATTRIBUTES.LABELLEDBY, tabId);
+  }
+
+  private setIntelligentTabindex(panel: HTMLElement): void {
+    const hasFocusableContent = panel.querySelector(SELECTORS.FOCUSABLE_ELEMENTS);
+
+    if (!hasFocusableContent) {
+      panel.setAttribute(ARIA_ATTRIBUTES.TABINDEX, TABINDEX_VALUES.FOCUSABLE);
+    }
+  }
+
+  private setInitialDynamicAttributes(tab: HTMLElement, panel: HTMLElement): void {
+    tab.setAttribute(ARIA_ATTRIBUTES.SELECTED, 'false');
+    tab.setAttribute(ARIA_ATTRIBUTES.TABINDEX, TABINDEX_VALUES.NOT_FOCUSABLE);
+    panel.hidden = true;
+  }
+
+  private validateRequiredAttributes(tab: HTMLElement, panel: HTMLElement): void {
+    if (!tab.getAttribute(ARIA_ATTRIBUTES.ROLE)) {
+      throw new Error(ERROR_MESSAGES.MISSING_TAB_ROLE);
+    }
+    if (!panel.getAttribute(ARIA_ATTRIBUTES.ROLE)) {
+      throw new Error(ERROR_MESSAGES.MISSING_PANEL_ROLE);
+    }
+    if (!tab.id) {
+      throw new Error(ERROR_MESSAGES.MISSING_TAB_ID);
+    }
+    if (!panel.id) {
+      throw new Error(ERROR_MESSAGES.MISSING_PANEL_ID);
+    }
   }
 
   private setupEvents(): void {
     this.tabs.forEach((tab, index) => {
-      // Click handler
-      tab.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.selectTab(index);
-      });
-
-      // Keyboard handler
+      tab.addEventListener('click', (e) => this.handleTabClick(e, index));
       tab.addEventListener('keydown', (e) => this.handleKeydown(e, index));
     });
+  }
+
+  private handleTabClick(event: Event, index: number): void {
+    event.preventDefault();
+    this.selectTab(index);
+  }
+
+  private selectInitialTab(): void {
+    const preselectedIndex = this.tabs.findIndex(tab =>
+      tab.getAttribute(ARIA_ATTRIBUTES.SELECTED) === 'true'
+    );
+    const initialIndex = preselectedIndex >= 0 ? preselectedIndex : 0;
+    this.selectTab(initialIndex, false);
   }
 
   private handleKeydown(event: KeyboardEvent, currentIndex: number): void {
@@ -142,10 +238,7 @@ export class Tabs {
     switch (event.key) {
       case 'ArrowLeft':
       case 'ArrowUp':
-        if (
-          (event.key === 'ArrowLeft' && orientation === 'horizontal') ||
-          (event.key === 'ArrowUp' && orientation === 'vertical')
-        ) {
+        if (this.isOrientationMatch(event.key, orientation)) {
           newIndex = getNextElement(this.tabs, currentIndex, -1, this.config.loop === 'true');
           handled = true;
         }
@@ -153,10 +246,7 @@ export class Tabs {
 
       case 'ArrowRight':
       case 'ArrowDown':
-        if (
-          (event.key === 'ArrowRight' && orientation === 'horizontal') ||
-          (event.key === 'ArrowDown' && orientation === 'vertical')
-        ) {
+        if (this.isOrientationMatch(event.key, orientation)) {
           newIndex = getNextElement(this.tabs, currentIndex, 1, this.config.loop === 'true');
           handled = true;
         }
@@ -175,75 +265,79 @@ export class Tabs {
 
     if (handled) {
       event.preventDefault();
-
-      // Move focus to new tab
       moveFocus(this.tabs[newIndex]);
 
-      // Auto-activate if configured
       if (this.config.activation === 'auto') {
         this.selectTab(newIndex);
       }
     }
   }
 
-  /**
-   * Select a tab by index
-   */
+  private isOrientationMatch(key: string, orientation: string): boolean {
+    return (
+      (key === 'ArrowLeft' && orientation === 'horizontal') ||
+      (key === 'ArrowUp' && orientation === 'vertical') ||
+      (key === 'ArrowRight' && orientation === 'horizontal') ||
+      (key === 'ArrowDown' && orientation === 'vertical')
+    );
+  }
+
   public selectTab(index: number, shouldAnnounce: boolean = true): void {
-    if (index < 0 || index >= this.tabs.length) {
-      console.warn(`focus-patterns: Invalid tab index ${index}`);
+    if (!this.isValidTabIndex(index)) {
+      console.warn(`${ERROR_MESSAGES.INVALID_TAB_INDEX} ${index}`);
       return;
     }
 
     const previousIndex = this.currentIndex;
     this.currentIndex = index;
 
-    // Deactivate all tabs
+    this.updateTabStates(index);
+    this.announceTabChange(index, previousIndex, shouldAnnounce);
+    this.notifyTabChange(index, previousIndex);
+  }
+
+  private isValidTabIndex(index: number): boolean {
+    return index >= 0 && index < this.tabs.length;
+  }
+
+  private updateTabStates(selectedIndex: number): void {
     this.tabs.forEach((tab, i) => {
       const panel = this.panels[i];
-      const isSelected = i === index;
+      const isSelected = i === selectedIndex;
 
-      tab.setAttribute('aria-selected', String(isSelected));
-      tab.setAttribute('tabindex', isSelected ? '0' : '-1');
+      tab.setAttribute(ARIA_ATTRIBUTES.SELECTED, String(isSelected));
+      tab.setAttribute(ARIA_ATTRIBUTES.TABINDEX, isSelected ? TABINDEX_VALUES.FOCUSABLE : TABINDEX_VALUES.NOT_FOCUSABLE);
 
       if (panel) {
         panel.hidden = !isSelected;
       }
     });
+  }
 
-    // Announce change to screen readers
+  private announceTabChange(index: number, previousIndex: number, shouldAnnounce: boolean): void {
     if (shouldAnnounce && this.config.announceChanges && previousIndex !== index) {
       const tabText = this.tabs[index].textContent || `Tab ${index + 1}`;
       announce(`${tabText} selected`);
     }
+  }
 
-    // Call onChange callback
+  private notifyTabChange(index: number, previousIndex: number): void {
     if (previousIndex !== index) {
       this.config.onChange(index, this.tabs[index]);
     }
   }
 
-  /**
-   * Get currently selected tab index
-   */
   public getSelectedIndex(): number {
     return this.currentIndex;
   }
 
-  /**
-   * Destroy the tabs instance and clean up
-   */
   public destroy(): void {
-    // Remove event listeners (simplified - in production would track and remove specific listeners)
     this.tabs.forEach(tab => {
       const newTab = tab.cloneNode(true);
       tab.parentNode?.replaceChild(newTab, tab);
     });
   }
 
-  /**
-   * Initialize tabs from an element
-   */
   public static init(element: HTMLElement, config?: TabsConfig): Tabs {
     return new Tabs(element, config);
   }

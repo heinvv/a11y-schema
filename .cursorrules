@@ -1,0 +1,37 @@
+# Code Quality Rules
+
+## Comments vs. Methods
+
+**Prefer self-explanatory method names over comments.**
+
+Instead of explaining code with comments, extract the code into a well-named method that describes its intent.
+
+### Bad:
+```typescript
+// Set tablist role and orientation
+if (!this.tablist.getAttribute('role')) {
+  this.tablist.setAttribute('role', 'tablist');
+}
+this.tablist.setAttribute('aria-orientation', this.config.orientation);
+```
+
+### Good:
+```typescript
+private setTablistAttributes(): void {
+  if (!this.tablist.getAttribute('role')) {
+    this.tablist.setAttribute('role', 'tablist');
+  }
+  this.tablist.setAttribute('aria-orientation', this.config.orientation);
+}
+```
+
+### When to use comments:
+- **Why**, not **what**: Explain non-obvious decisions or constraints
+- **External references**: Link to specs (e.g., WAI-ARIA APG)
+- **Public API documentation**: JSDoc for exported functions/classes
+- **Complex algorithms**: When the logic itself is inherently complex
+
+### When NOT to use comments:
+- Describing what the code does (use method names instead)
+- Step-by-step explanations (extract to methods)
+- Section headers (organize into methods/classes)
